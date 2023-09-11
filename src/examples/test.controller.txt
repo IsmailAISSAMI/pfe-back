@@ -1,0 +1,378 @@
+const mongoose = require('mongoose');
+const Schema = mongoose.Schema;
+
+const fileSchema = new Schema({
+    filePath: {
+        type: String,
+        required: true,
+    },
+    fileType: {
+        type: String,
+        required: true,
+    },
+    sharedWith: [{
+        userId: {
+            type: Schema.Types.ObjectId,
+            ref: 'User',
+        },
+        permission: {
+            type: String,
+            enum: ['read', 'write'],
+            default: 'read',
+        }
+    }],
+}, {
+    timestamps: true,
+});
+
+module.exports = mongoose.model('File', fileSchema);
+const Patient = require('../models/patient.model');
+
+exports.getPatient = async (req, res) => {
+    try {
+        const patient = await Patient.findById(req.params.id).populate('userId');
+        if (!patient) {
+            return res.status(404).send({ message: 'Patient not found.' });
+        }
+        res.send(patient);
+    } catch (error) {
+        console.error('Error fetching patient:', error);
+        res.status(500).send({ message: 'Error fetching patient.' });
+    }
+};
+
+exports.getPatients = async (req, res) => {
+    try {
+        const patients = await Patient.find().populate('userId');
+        res.send(patients);
+    } catch (error) {
+        console.error('Error fetching patients:', error);
+        res.status(500).send({ message: 'Error fetching patients.' });
+    }
+};
+
+exports.updatePatient = async (req, res) => {
+    try {
+        const updatedPatient = await Patient.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        if (!updatedPatient) {
+            return res.status(404).send({ message: 'Patient not found.' });
+        }
+        res.send(updatedPatient);
+    } catch (error) {
+        console.error('Error updating patient:', error);
+        res.status(500).send({ message: 'Error updating patient.' });
+    }
+};
+
+exports.removePatient = async (req, res) => {
+    try {
+        const patient = await Patient.findByIdAndRemove(req.params.id);
+        if (!patient) {
+            return res.status(404).send({ message: 'Patient not found.' });
+        }
+        res.send({ message: 'Patient removed successfully.' });
+    } catch (error) {
+        console.error('Error removing patient:', error);
+        res.status(500).send({ message: 'Error removing patient.' });
+    }
+};
+const User = require('../models/user.model');
+const Doctor = require('../models/doctor.model');
+const Patient = require('../models/patient.model');
+const bcrypt = require('bcrypt');
+const { generateToken } = require('../helpers/auth.helper');
+
+exports.register = async (req, res) => {
+  try {
+    const existingUser = await User.findOne({ email: req.body.email });
+    if (existingUser) {
+      return res.status(400).send({ message: 'Email already exists.' });
+    }
+
+    const hashedPassword = bcrypt.hashSync(req.body.password, 10);
+    req.body.password = hashedPassword;
+
+    const user = new User(req.body);
+    const savedUser = await user.save();
+
+    // Depending on the role, create a doctor or patient profile
+    if (savedUser.role === 'doctor') {
+      const doctor = new Doctor({
+        userId: savedUser._id,
+      });
+      await doctor.save();
+    } else if (savedUser.role === 'patient') {
+      const patient = new Patient({
+        userId: savedUser._id,
+      });
+      await patient.save();
+    }
+
+    console.log(`User registered with ID: ${savedUser._id}`);
+    res.status(200).send({
+      auth: true,
+      token: generateToken(savedUser._id, savedUser.role),
+    });
+  } catch (error) {
+    console.error('Error during user registration:', error);
+    res.status(500).send({ message: 'Error during user registration.' });
+  }
+};
+
+exports.login = async (req, res) => {
+  try {
+    const user = await User.findOne({ email: req.body.email });
+    if (!user) {
+      return res.status(404).send({ message: 'User not found.' });
+    }
+
+    const passwordValid = bcrypt.compareSync(req.body.password, user.password);
+    if (!passwordValid) {
+      console.log('Invalid password attempt for user:', req.body.email);
+      return res.status(401).send({ message: 'Invalid password.' });
+    }
+
+    console.log(`User logged in with ID: ${user._id}`);
+    res.status(200).send({
+      auth: true,
+      token: generateToken(user._id, user.role),
+      role: user.role,
+    });
+  } catch (error) {
+    console.error('Error during user login:', error);
+    res.status(500).send({ message: 'Error during user login.' });
+  }
+};
+const Doctor = require('../models/doctor.model');
+
+exports.getDoctor = async (req, res) => {
+    try {
+        const doctor = await Doctor.findById(req.params.id).populate('userId');
+        if (!doctor) {
+            return res.status(404).send({ message: 'Doctor not found.' });
+        }
+        res.send(doctor);
+    } catch (error) {
+        console.error('Error fetching doctor:', error);
+        res.status(500).send({ message: 'Error fetching doctor.' });
+    }
+};
+
+exports.getDoctors = async (req, res) => {
+    try {
+        const doctors = await Doctor.find().populate('userId');
+        res.send(doctors);
+    } catch (error) {
+        console.error('Error fetching doctors:', error);
+        res.status(500).send({ message: 'Error fetching doctors.' });
+    }
+};
+
+exports.updateDoctor = async (req, res) => {
+    try {
+        const updatedDoctor = await Doctor.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        if (!updatedDoctor) {
+            return res.status(404).send({ message: 'Doctor not found.' });
+        }
+        res.send(updatedDoctor);
+    } catch (error) {
+        console.error('Error updating doctor:', error);
+        res.status(500).send({ message: 'Error updating doctor.' });
+    }
+};
+
+exports.removeDoctor = async (req, res) => {
+    try {
+        const doctor = await Doctor.findByIdAndRemove(req.params.id);
+        if (!doctor) {
+            return res.status(404).send({ message: 'Doctor not found.' });
+        }
+        res.send({ message: 'Doctor removed successfully.' });
+    } catch (error) {
+        console.error('Error removing doctor:', error);
+        res.status(500).send({ message: 'Error removing doctor.' });
+    }
+};
+const File = require('../models/file.model');
+
+exports.getFile = async (req, res) => {
+    try {
+        const file = await File.findById(req.params.id);
+        if (!file) {
+            return res.status(404).send({ message: 'File not found.' });
+        }
+        res.send(file);
+    } catch (error) {
+        console.error('Error fetching file:', error);
+        res.status(500).send({ message: 'Error fetching file.' });
+    }
+};
+
+exports.getFiles = async (req, res) => {
+    try {
+        const files = await File.find();
+        res.send(files);
+    } catch (error) {
+        console.error('Error fetching files:', error);
+        res.status(500).send({ message: 'Error fetching files.' });
+    }
+};
+
+exports.createFile = async (req, res) => {
+    try {
+        const file = new File(req.body);
+        await file.save();
+        res.status(201).send(file);
+    } catch (error) {
+        console.error('Error creating file:', error);
+        res.status(500).send({ message: 'Error creating file.' });
+    }
+};
+
+exports.updateFile = async (req, res) => {
+    try {
+        const updatedFile = await File.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        if (!updatedFile) {
+            return res.status(404).send({ message: 'File not found.' });
+        }
+        res.send(updatedFile);
+    } catch (error) {
+        console.error('Error updating file:', error);
+        res.status(500).send({ message: 'Error updating file.' });
+    }
+};
+
+exports.removeFile = async (req, res) => {
+    try {
+        const file = await File.findByIdAndRemove(req.params.id);
+        if (!file) {
+            return res.status(404).send({ message: 'File not found.' });
+        }
+        res.send({ message: 'File removed successfully.' });
+    } catch (error) {
+        console.error('Error removing file:', error);
+        res.status(500).send({ message: 'Error removing file.' });
+    }
+};
+const Prescription = require('../models/prescription.model');
+
+exports.getPrescription = async (req, res) => {
+    try {
+        const prescription = await Prescription.findById(req.params.id).populate(['doctorId', 'patientId']);
+        if (!prescription) {
+            return res.status(404).send({ message: 'Prescription not found.' });
+        }
+        res.send(prescription);
+    } catch (error) {
+        console.error('Error fetching prescription:', error);
+        res.status(500).send({ message: 'Error fetching prescription.' });
+    }
+};
+
+exports.getPrescriptions = async (req, res) => {
+    try {
+        const prescriptions = await Prescription.find().populate(['doctorId', 'patientId']);
+        res.send(prescriptions);
+    } catch (error) {
+        console.error('Error fetching prescriptions:', error);
+        res.status(500).send({ message: 'Error fetching prescriptions.' });
+    }
+};
+
+exports.createPrescription = async (req, res) => {
+    try {
+        const prescription = new Prescription(req.body);
+        await prescription.save();
+        res.status(201).send(prescription);
+    } catch (error) {
+        console.error('Error creating prescription:', error);
+        res.status(500).send({ message: 'Error creating prescription.' });
+    }
+};
+
+exports.updatePrescription = async (req, res) => {
+    try {
+        const updatedPrescription = await Prescription.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        if (!updatedPrescription) {
+            return res.status(404).send({ message: 'Prescription not found.' });
+        }
+        res.send(updatedPrescription);
+    } catch (error) {
+        console.error('Error updating prescription:', error);
+        res.status(500).send({ message: 'Error updating prescription.' });
+    }
+};
+
+exports.removePrescription = async (req, res) => {
+    try {
+        const prescription = await Prescription.findByIdAndRemove(req.params.id);
+        if (!prescription) {
+            return res.status(404).send({ message: 'Prescription not found.' });
+        }
+        res.send({ message: 'Prescription removed successfully.' });
+    } catch (error) {
+        console.error('Error removing prescription:', error);
+        res.status(500).send({ message: 'Error removing prescription.' });
+    }
+};
+const Appointment = require('../models/appointment.model');
+
+exports.getAppointment = async (req, res) => {
+    try {
+        const appointment = await Appointment.findById(req.params.id).populate(['doctorId', 'patientId']);
+        if (!appointment) {
+            return res.status(404).send({ message: 'Appointment not found.' });
+        }
+        res.send(appointment);
+    } catch (error) {
+        console.error('Error fetching appointment:', error);
+        res.status(500).send({ message: 'Error fetching appointment.' });
+    }
+};
+
+exports.getAppointments = async (req, res) => {
+    try {
+        const appointments = await Appointment.find().populate(['doctorId', 'patientId']);
+        res.send(appointments);
+    } catch (error) {
+        console.error('Error fetching appointments:', error);
+        res.status(500).send({ message: 'Error fetching appointments.' });
+    }
+};
+
+exports.createAppointment = async (req, res) => {
+    try {
+        const appointment = new Appointment(req.body);
+        await appointment.save();
+        res.status(201).send(appointment);
+    } catch (error) {
+        console.error('Error creating appointment:', error);
+        res.status(500).send({ message: 'Error creating appointment.' });
+    }
+};
+
+exports.updateAppointment = async (req, res) => {
+    try {
+        const updatedAppointment = await Appointment.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        if (!updatedAppointment) {
+            return res.status(404).send({ message: 'Appointment not found.' });
+        }
+        res.send(updatedAppointment);
+    } catch (error) {
+        console.error('Error updating appointment:', error);
+        res.status(500).send({ message: 'Error updating appointment.' });
+    }
+};
+
+exports.removeAppointment = async (req, res) => {
+    try {
+        const appointment = await Appointment.findByIdAndRemove(req.params.id);
+        if (!appointment) {
+            return res.status(404).send({ message: 'Appointment not found.' });
+        }
+        res.send({ message: 'Appointment removed successfully.' });
+    } catch (error) {
+        console.error('Error removing appointment:', error);
+        res.status(500).send({ message: 'Error removing appointment.' });
+    }
+};

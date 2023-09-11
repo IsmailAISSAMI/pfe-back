@@ -1,0 +1,36 @@
+{
+  "name": "naity",
+  "version": "1.0.0",
+  "description": "",
+  "main": "app.js",
+  "scripts": {
+    "dev": "nodemon app.js ",
+    "start": "node app.js",
+    "test": "jest"
+  },
+  "author": "Thomas Pomart",
+  "license": "ISC",
+  "engines" : { 
+    "node" : ">=16.20.1"
+  },
+  "dependencies": {
+    "bcrypt": "^5.0.1",
+    "body-parser": "^1.19.0",
+    "cors": "^2.8.5",
+    "dotenv": "^8.2.0",
+    "express": "^4.18.2",
+    "jsonwebtoken": "^8.5.1",
+    "lodash": "^4.17.21",
+    "mongoose": "^5.11.17",
+    "stripe": "^8.197.0",
+    "swagger-jsdoc": "5.0.1",
+    "swagger-ui-express": "^4.5.0"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.20"
+  },
+  "bugs": {
+    "url": "https://github.com/Regliss/projet-final-back/issues"
+  },
+  "homepage": "https://github.com/Regliss/projet-final-back#rea  me"
+}

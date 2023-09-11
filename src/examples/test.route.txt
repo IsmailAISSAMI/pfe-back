@@ -1,0 +1,118 @@
+const express = require('express');
+const router = express.Router();
+const authRouter = require('./auth.route');
+const usersRouter = require('./users.route');
+const doctorsRouter = require('./doctors.route');
+const patientsRouter = require('./patients.route');
+const appointmentsRouter = require('./appointments.route');
+const prescriptionsRouter = require('./prescriptions.route');
+const filesRouter = require('./files.route');
+
+router.use('/auth', authRouter);
+
+router.use('/users', usersRouter);
+router.use('/doctors', doctorsRouter);
+router.use('/patients', patientsRouter);
+
+router.use('/appointments', appointmentsRouter);
+router.use('/prescriptions', prescriptionsRouter);
+router.use('/files', filesRouter);
+
+// WEBHOOKS MIDDLEWARE
+router.use("/api/webhooks/stripe", express.raw({ type: "*/*" }));
+
+module.exports = router;
+const express = require('express');
+const router = express.Router();
+const userController = require('../controllers/user.controller');
+const {verifyToken} = require('../helpers/auth.helper');
+
+// GET
+router.get('/:id', verifyToken, userController.getUser);
+router.get('/', userController.getUsers); 
+
+// UPDATE
+router.put('/:id', verifyToken, userController.updateUser); 
+
+// DELETE
+router.delete('/:id', verifyToken, userController.removeUser); // Soft delete a specific user by ID
+
+module.exports = router;
+const express = require('express');
+const router = express.Router();
+const doctorController = require('../controllers/doctor.controller');
+const {verifyToken} = require('../helpers/auth.helper');
+
+router.get('/:id', verifyToken, doctorController.getDoctor);
+router.get('/', doctorController.getDoctors);
+
+router.put('/:id', verifyToken, doctorController.updateDoctor);
+
+router.delete('/:id', verifyToken, doctorController.removeDoctor);
+
+module.exports = router;
+const express = require('express');
+const router = express.Router();
+const patientController = require('../controllers/patient.controller');
+const {verifyToken} = require('../helpers/auth.helper');
+
+router.get('/:id', verifyToken, patientController.getPatient);
+router.get('/', patientController.getPatients);
+
+router.put('/:id', verifyToken, patientController.updatePatient);
+
+router.delete('/:id', verifyToken, patientController.removePatient);
+
+module.exports = router;
+const express = require('express');
+const router = express.Router();
+const authController = require('../controllers/auth.controller');
+
+router.post('/register', authController.register);
+router.post('/login', authController.login);
+
+module.exports = router;const express = require('express');
+const router = express.Router();
+const appointmentController = require('../controllers/appointment.controller');
+const {verifyToken} = require('../helpers/auth.helper');
+
+router.get('/:id', verifyToken, appointmentController.getAppointment);
+router.get('/', verifyToken, appointmentController.getAppointments);
+
+router.post('/', verifyToken, appointmentController.createAppointment);
+
+router.put('/:id', verifyToken, appointmentController.updateAppointment);
+
+router.delete('/:id', verifyToken, appointmentController.removeAppointment);
+
+module.exports = router;
+const express = require('express');
+const router = express.Router();
+const fileController = require('../controllers/file.controller');
+const {verifyToken} = require('../helpers/auth.helper');
+
+router.get('/:id', verifyToken, fileController.getFile);
+router.get('/', verifyToken, fileController.getFiles);
+
+router.post('/', verifyToken, fileController.createFile);
+
+router.put('/:id', verifyToken, fileController.updateFile);
+
+router.delete('/:id', verifyToken, fileController.removeFile);
+
+module.exports = router;
+const express = require('express');
+const router = express.Router();
+const prescriptionController = require('../controllers/prescription.controller');
+const {verifyToken} = require('../helpers/auth.helper');
+
+router.get('/:id', verifyToken, prescriptionController.getPrescription);
+router.get('/', verifyToken, prescriptionController.getPrescriptions);
+
+router.post('/', verifyToken, prescriptionController.createPrescription);
+
+router.put('/:id', verifyToken, prescriptionController.updatePrescription);
+
+router.delete('/:id', verifyToken, prescriptionController.removePrescription);
+
+module.exports = router;

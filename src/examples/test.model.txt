@@ -1,0 +1,344 @@
+const mongoose = require('mongoose');
+const Schema = mongoose.Schema;
+
+const userSchema = new Schema({
+    firstName: {
+        type: String,
+        required: true,
+        trim: true,
+        lowercase: true,
+    },
+    lastName: {
+        type: String,
+        required: true,
+        trim: true,
+        lowercase: true,
+    },
+    email: {
+        type: String,
+        required: true,
+        unique: true,
+        trim: true,
+        lowercase: true,
+        match: /^\S+@\S+\.\S+$/, // Email validation
+    },
+    password: {
+        type: String,
+        required: true,
+        minlength: 8,
+    },
+    role: {
+        type: String,
+        enum: ['admin', 'doctor', 'patient'],
+        required: true,
+    },
+    isDeleted: {
+        type: Boolean,
+        default: false,
+    },
+    phoneNumber: {
+        type: String,
+        trim: true,
+        unique: true,
+    },
+    address: {
+        street: String,
+        city: String,
+        state: String,
+        zip: String,
+        country: String
+    }
+}, {
+    timestamps: true, // Adds createdAt and updatedAt fields
+});
+module.exports = mongoose.model('User', userSchema);
+const mongoose = require("mongoose");
+const Schema = mongoose.Schema;
+
+// Doctor Schema (extends User)
+const doctorSchema = new Schema(
+  {
+    userId: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+      index: true, // Creates an index on this field for efficient queries
+    },
+    // Specialty of the doctor, such as "Cardiology", "Dermatology", "Pediatrics", etc.
+    // This refers to the specific area of medicine that the doctor is trained and specialized in.
+    // Typically, a doctor has one primary specialty, which is why it's represented as a single string in the model
+    specialty: {
+      type: String,
+      trim: true,
+    },
+    // List of the doctor's educational and training credentials.
+    // Can include degrees, diplomas, certifications, etc.
+    // Example value: [
+    //     "Diplôme d'État de Docteur en Médecine", // The primary medical degree in France
+    //     "DES de Cardiologie", // Specialized diploma in Cardiology
+    // ]
+    qualifications: {
+      type: [String],
+    },
+    yearsOfExperience: {
+      type: Number,
+      min: 0,
+    },
+    clinicAddress: {
+      type: String,
+      trim: true,
+    },
+    consultationFee: {
+      type: Number,
+      min: 0, 
+    },
+    // Indicates whether the doctor's account has been verified and approved by the platform
+    verified: {
+      type: Boolean,
+      default: false,
+    },
+    // Available consultation times for the doctor, an array of objects
+    availableTimes: [
+      {
+        day: {
+          type: String,
+          enum: [
+            "Monday",
+            "Tuesday",
+            "Wednesday",
+            "Thursday",
+            "Friday",
+            "Saturday",
+            "Sunday",
+          ],
+        },
+        startTime: {
+          type: String,
+          match: /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/,
+        },
+        endTime: {
+          type: String,
+          match: /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/,
+        },
+        // Intervals between appointments, in minutes (e.g. 30 minutes)
+        interval: {
+          type: Number, // in minutes
+          default: 30,
+        },
+        // Break times for the doctor during their available hours
+        breaks: [
+          {
+            start: {
+              type: String,
+              match: /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/,
+            },
+            end: {
+              type: String,
+              match: /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/,
+            },
+          },
+        ],
+      },
+    ],
+    givenPrescriptions: [{
+        type: Schema.Types.ObjectId,
+        ref: 'Prescription',
+    }],
+    offersVideoConsultation: {
+        type: Boolean,
+        default: false,
+    },
+    videoConsultationSettings: {
+        platform: {
+            type: String,
+            enum: ['Zoom', 'Twilio', 'WebRTC', 'Other'],
+        },
+        preferences: {
+            type: String,
+            trim: true,
+        },
+    },
+  },
+  {
+    timestamps: true, // Adds createdAt and updatedAt fields
+  }
+);
+module.exports = mongoose.model("Doctor", doctorSchema);
+const mongoose = require('mongoose');
+const Schema = mongoose.Schema;
+
+// Patient Schema (extends User)
+const patientSchema = new Schema({
+    userId: {
+        type: Schema.Types.ObjectId,
+        ref: 'User',
+        required: true,
+        index: true,
+    },
+    dateOfBirth: {
+        type: Date,
+    },
+    gender: {
+        type: String,
+        enum: ['male', 'female'],
+    },
+    // (Numero de sécurité sociale)
+    socialSecurityNumber: {
+        type: String,
+        unique: true,
+        match: /^\d{15}$/, // Basic validation for 15 numeric characters
+    },
+    medicalHistory: [{
+        condition: {
+            type: String,
+            trim: true,
+        },
+        dateDiagnosed: {
+            type: Date,
+        }
+    }],
+    allergies: [{
+        allergen: {
+            type: String,
+            trim: true,
+        },
+        reaction: {
+            type: String,
+            trim: true,
+        }
+    }],
+    prescriptions: [{
+        type: Schema.Types.ObjectId,
+        ref: 'Prescription',
+    }],
+    emergencyContact: {
+        name: String,
+        phoneNumber: String,
+        relationship: String
+    },
+    videoConsultationPreferences: {
+        preferredPlatform: {
+            type: String,
+            enum: ['Zoom', 'Twilio', 'WebRTC', 'Other'],
+        },
+        settings: {
+            type: String,
+            trim: true,
+        }
+    },
+}, {
+    timestamps: true,
+});
+
+module.exports = mongoose.model('Patient', patientSchema);
+const mongoose = require('mongoose');
+const Schema = mongoose.Schema;
+
+const appointmentSchema = new Schema({
+    doctorId: {
+        type: Schema.Types.ObjectId,
+        ref: 'Doctor',
+        required: true,
+    },
+    patientId: {
+        type: Schema.Types.ObjectId,
+        ref: 'Patient',
+        required: true,
+    },
+    date: {
+        type: Date,
+        required: true,
+    },
+    time: {
+        type: String,
+        required: true,
+        match: /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/,
+    },
+    status: {
+        type: String,
+        enum: ['scheduled', 'completed', 'canceled'],
+        default: 'scheduled',
+    },
+    consultationType: {
+        type: String,
+        enum: ['in-person', 'video'],
+        required: true,
+    },
+    videoLink: {
+        type: String,
+        trim: true,
+    },
+    videoToken: {
+        type: String,
+        select: false,
+    },
+    notes: {
+        type: String,
+        trim: true,
+    },
+    prescriptionId: {
+        type: Schema.Types.ObjectId,
+        ref: 'Prescription',
+    },
+}, {
+    timestamps: true,
+});
+
+module.exports = mongoose.model('Appointment', appointmentSchema);
+const mongoose = require('mongoose');
+const Schema = mongoose.Schema;
+
+const prescriptionSchema = new Schema({
+    doctorId: {
+        type: Schema.Types.ObjectId,
+        ref: 'Doctor',
+        required: true,
+    },
+    patientId: {
+        type: Schema.Types.ObjectId,
+        ref: 'Patient',
+        required: true,
+    },
+    description: {
+        type: String,
+        required: true,
+        trim: true,
+    },
+    dateIssued: {
+        type: Date,
+        required: true,
+    },
+    fileId: {
+        type: Schema.Types.ObjectId,
+        ref: 'File',
+    },
+}, {
+    timestamps: true,
+});
+
+module.exports = mongoose.model('Prescription', prescriptionSchema);
+const mongoose = require('mongoose');
+const Schema = mongoose.Schema;
+
+const fileSchema = new Schema({
+    filePath: {
+        type: String,
+        required: true,
+    },
+    fileType: {
+        type: String,
+        required: true,
+    },
+    sharedWith: [{
+        type: Schema.Types.ObjectId,
+        ref: 'User',
+    }],
+    isDeleted: {
+        type: Boolean,
+        default: false,
+    },
+}, {
+    timestamps: true,
+});
+
+module.exports = mongoose.model('File', fileSchema);
